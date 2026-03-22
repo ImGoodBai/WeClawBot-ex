@@ -112,6 +112,12 @@ Claude Code CLI（本地）
 | `WXCLAWBOT_CLAUDE_MODEL` | Claude 模型 |
 | `WXCLAWBOT_CLAUDE_PERMISSION_MODE` | 权限模式 |
 
+## 微信群二维码
+
+如果要加入项目微信群，直接扫码：
+
+<img src="./docs/wechat-group-qr.jpg" alt="微信群二维码" width="280" />
+
 ## 许可证
 
 MIT

@@ -112,6 +112,12 @@ Reply back to Weixin
 | `WXCLAWBOT_CLAUDE_MODEL` | Claude model |
 | `WXCLAWBOT_CLAUDE_PERMISSION_MODE` | Permission mode |
 
+## Weixin Group
+
+If you want to join the Weixin group for this project, scan:
+
+<img src="./docs/wechat-group-qr.jpg" alt="Weixin group QR" width="280" />
+
 ## License
 
 MIT
