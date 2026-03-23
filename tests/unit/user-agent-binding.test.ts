@@ -94,6 +94,60 @@ describe("user-agent binding", () => {
     expect(bindings.some((item) => item.match?.accountId === "bot-a-v2-im-bot" && item.agentId === first.agentId)).toBe(true);
   });
 
+  it("preserves both bindings when two users bind concurrently", async () => {
+    const [first, second] = await Promise.all([
+      resolveOrRegisterWeixinUserAgent({
+        userId: "wx-user-a",
+        accountId: "bot-a-im-bot",
+      }),
+      resolveOrRegisterWeixinUserAgent({
+        userId: "wx-user-b",
+        accountId: "bot-b-im-bot",
+      }),
+    ]);
+
+    expect(first.mode).toBe("dedicated");
+    expect(second.mode).toBe("dedicated");
+    expect(first.agentId).not.toBe(second.agentId);
+
+    const updated = JSON.parse(fs.readFileSync(env.configPath, "utf-8")) as {
+      agents?: { list?: Array<{ id?: string }> };
+      bindings?: Array<{ match?: { channel?: string; accountId?: string }; agentId?: string }>;
+      session?: { dmScope?: string };
+    };
+    const mapPath = `${env.stateDir}/openclaw-weixin/user-agent-map.json`;
+    const map = JSON.parse(fs.readFileSync(mapPath, "utf-8")) as {
+      users?: Record<string, { agentId?: string; activeAccountId?: string }>;
+    };
+    const agentIds = new Set((updated.agents?.list ?? []).map((item) => item.id).filter(Boolean));
+    const bindings = updated.bindings ?? [];
+
+    expect(agentIds.has("main")).toBe(true);
+    expect(agentIds.has(first.agentId)).toBe(true);
+    expect(agentIds.has(second.agentId)).toBe(true);
+    expect(
+      bindings.some(
+        (item) =>
+          item.match?.channel === "openclaw-weixin" &&
+          item.match?.accountId === "bot-a-im-bot" &&
+          item.agentId === first.agentId,
+      ),
+    ).toBe(true);
+    expect(
+      bindings.some(
+        (item) =>
+          item.match?.channel === "openclaw-weixin" &&
+          item.match?.accountId === "bot-b-im-bot" &&
+          item.agentId === second.agentId,
+      ),
+    ).toBe(true);
+    expect(updated.session?.dmScope).toBe("per-account-channel-peer");
+    expect(map.users?.["wx-user-a"]?.agentId).toBe(first.agentId);
+    expect(map.users?.["wx-user-b"]?.agentId).toBe(second.agentId);
+    expect(map.users?.["wx-user-a"]?.activeAccountId).toBe("bot-a-im-bot");
+    expect(map.users?.["wx-user-b"]?.activeAccountId).toBe("bot-b-im-bot");
+  });
+
   it("falls back to the shared agent when userId is missing", async () => {
     const result = await resolveOrRegisterWeixinUserAgent({
       accountId: "bot-anon-im-bot",
