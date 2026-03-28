@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   getWeixinChannelReloadStatus,
   triggerWeixinChannelReload,
-} from "../../src/auth/accounts.js";
+} from "../../src/weixin/auth/accounts.js";
 import { createTempOpenClawEnv } from "../helpers/temp-env.js";
 
 let env: ReturnType<typeof createTempOpenClawEnv>;

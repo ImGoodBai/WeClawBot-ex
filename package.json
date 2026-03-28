@@ -1,46 +1,52 @@
 {
-  "name": "weclawbot-ex",
-  "version": "2026.3.24",
-  "description": "WeClawBot-ex OpenClaw Weixin demo plugin fork with local web console",
+  "name": "clawbnb-hub",
+  "version": "2026.3.28",
+  "description": "ClawBNB Hub OpenClaw plugin with Weixin channel, rental relay, and proxy provider",
+  "keywords": [
+    "clawbnb",
+    "hub",
+    "openclaw",
+    "plugin",
+    "proxy",
+    "relay",
+    "rental",
+    "weixin"
+  ],
+  "homepage": "https://github.com/ImGoodBai/clawbnb-hub#readme",
+  "bugs": {
+    "url": "https://github.com/ImGoodBai/clawbnb-hub/issues"
+  },
   "license": "MIT",
-  "author": "MoltHuman",
-  "homepage": "https://github.com/ImGoodBai/WeClawBot-ex",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ImGoodBai/WeClawBot-ex.git"
+    "url": "git+https://github.com/ImGoodBai/clawbnb-hub.git"
   },
-  "type": "module",
   "files": [
-    "src/",
-    "!src/**/*.test.ts",
-    "!src/**/node_modules/",
-    "docs/",
+    "README.md",
     "index.ts",
     "openclaw.plugin.json",
-    "README.md",
-    "README.zh_CN.md",
-    "CHANGELOG.md",
-    "CHANGELOG.zh_CN.md",
-    "NOTICE"
+    "src/",
+    "!src/**/*.test.ts",
+    "!src/**/node_modules/"
   ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
+    "build": "tsc --noEmit",
+    "prepublishOnly": "npm run test:gate",
     "test": "vitest run --coverage",
-    "test:unit": "vitest run tests/unit",
+    "test:gate": "npm run typecheck && npm run test:unit && npm run test:smoke && npm pack --dry-run --cache ./.npm-cache",
     "test:smoke": "vitest run tests/smoke",
-    "test:gate": "npm run test:unit && npm run test:smoke && npm pack --dry-run --cache ./.npm-cache",
-    "test:gate:full": "npm run typecheck && npm run test:gate",
-    "typecheck": "tsc --noEmit",
-    "build": "tsc",
-    "prepublishOnly": "npm run test:gate"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "peerDependencies": {
-    "openclaw": ">=2026.3.12"
+    "test:unit": "vitest run src/*.test.ts tests/unit",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@mariozechner/pi-agent-core": "0.58.0",
+    "@mariozechner/pi-ai": "0.60.0",
     "qrcode-terminal": "0.12.0",
+    "ws": "^8.19.0",
     "zod": "4.3.6"
   },
   "devDependencies": {
@@ -49,32 +55,38 @@
     "typescript": "^5.8.0",
     "vitest": "^3.1.0"
   },
+  "peerDependencies": {
+    "openclaw": ">=2026.3.22"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "ilink_appid": "bot",
   "openclaw": {
     "extensions": [
       "./index.ts"
     ],
-    "release": {
-      "publishToNpm": true
-    },
     "channel": {
-      "id": "openclaw-weixin",
-      "label": "openclaw-weixin",
-      "selectionLabel": "openclaw-weixin",
-      "docsPath": "/channels/openclaw-weixin",
-      "docsLabel": "openclaw-weixin",
+      "id": "clawbnb-weixin",
+      "label": "clawbnb-weixin",
+      "selectionLabel": "clawbnb-weixin",
+      "docsPath": "/channels/clawbnb-weixin",
+      "docsLabel": "clawbnb-weixin",
       "blurb": "Weixin channel",
       "order": 75
     },
     "install": {
-      "npmSpec": "weclawbot-ex",
-      "defaultChoice": "npm"
+      "npmSpec": "clawbnb-hub",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.3.22"
+    },
+    "release": {
+      "publishToNpm": true
     }
-  },
-  "upstream": {
-    "package": "@tencent-weixin/openclaw-weixin",
-    "version": "1.0.2"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

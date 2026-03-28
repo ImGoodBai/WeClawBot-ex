@@ -8,3 +8,6 @@ export function normalizeAccountId(input) {
     .replace(/[@.]/g, "-");
 }
 
+export function definePluginEntry(entry) {
+  return entry;
+}

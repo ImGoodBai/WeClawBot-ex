@@ -1,43 +1,32 @@
-# Contributing to WeClawBot-ex
+# Contributing to ClawBNB Hub
 
-Before changing code, read these documents in order:
+## Scope
 
-1. `moltApp/docs/SYSTEM-OVERVIEW.md`
-2. `moltApp/docs/standards/AI-EXECUTION-BASELINE.md`
-3. `moltApp/docs/standards/OPENCLAW-PLUGIN-COLLABORATION-BASELINE.md`
-4. `openclaw-main/docs/molthuman/README.md`
-5. `openclaw-main/docs/molthuman/weclawbot-fork-governance.md`
+This package ships one OpenClaw plugin entry with:
 
-## Working rules
+- the `clawbnb-weixin` channel
+- the local Weixin control console
+- the rental relay and proxy provider
 
-1. Treat upstream-derived runtime/protocol files as frozen by default.
-2. Do not perform repository-wide renames without an approved plan.
-3. Keep new product and management-console logic in first-party files whenever possible.
-4. Use controlled patch files only when the change cannot be implemented outside the upstream-derived layer.
+## Working Rules
 
-## Typical safe areas
+1. Treat upstream-derived runtime and protocol files as frozen unless a compatibility fix is explicitly required.
+2. Keep new product logic in first-party files whenever possible.
+3. Do not reintroduce `molthuman-oc-plugin` compatibility paths unless the mission explicitly requires them.
+4. Keep public docs free of private workspace paths and private collaboration references.
 
-1. `src/service/`
-2. README and installation docs
-3. Repository metadata
-4. New adapter files with clear boundaries
+## Safe Areas
 
-## Before opening a change
+1. `src/weixin/service/`
+2. `README.md`, `README.zh_CN.md`, `CHANGELOG*`, `NOTICE`
+3. package metadata and install docs
+4. new adapter files with clear boundaries
 
-1. List the exact files you plan to touch.
-2. State which files are frozen, which are controlled patch files, and why.
-3. Record the verification steps and rollback point.
+## Minimum Verification
 
-## Minimum verification
+Run these before opening a change:
 
-Run these in the repository before opening a PR:
-
-1. `npm run test:unit`
-2. `npm run test:smoke`
-3. `npm run test:gate`
-4. `npm run test:gate:full` when the branch also updates upstream-derived imports or packaging behavior
-
-## References
-
-1. Main collaboration baseline: `moltApp/docs/standards/OPENCLAW-PLUGIN-COLLABORATION-BASELINE.md`
-2. Fork governance: `openclaw-main/docs/molthuman/weclawbot-fork-governance.md`
+1. `npm run typecheck`
+2. `npm run test:unit`
+3. `npm run test:smoke`
+4. `npm pack --dry-run --cache ./.npm-cache`

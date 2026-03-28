@@ -2,6 +2,7 @@ type MockRequestInit = {
   method: string;
   url: string;
   body?: Record<string, unknown>;
+  headers?: Record<string, string>;
 };
 
 type MockResponse = {
@@ -19,6 +20,7 @@ export async function invokeHttpHandler(
   const req = {
     method: init.method,
     url: init.url,
+    headers: init.headers ?? {},
     async *[Symbol.asyncIterator]() {
       for (const chunk of bodyChunks) {
         yield chunk;
@@ -50,4 +52,3 @@ export async function invokeHttpHandler(
     json: text ? JSON.parse(text) : undefined,
   };
 }
-

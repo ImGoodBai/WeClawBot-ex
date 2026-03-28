@@ -8,16 +8,11 @@ export type ReplyPayload = {
 
 export type ChannelAccountSnapshot = Record<string, any>;
 
-export type PluginRuntime = {
-  channel: any;
-};
+export type PluginRuntime = Record<string, any>;
 
-export type ChannelPlugin<T = any> = {
+export type ChannelPlugin<T = any> = Record<string, any> & {
   id: string;
   config: any;
-  gateway?: any;
-  auth?: any;
-  reload?: any;
 };
 
 export { buildChannelConfigSchema, normalizeAccountId } from "./core.js";

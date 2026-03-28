@@ -2,6 +2,20 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/) 格式。
 
+## [2026.3.28]
+
+### 变更
+
+- 将公开包名、plugin id 和仓库品牌统一切到 `clawbnb-hub`
+- 将微信 channel id 和 state namespace 统一切到 `clawbnb-weixin`
+- 安装与迁移文档改写为从 `molthuman-oc-plugin` 的干净切换方案
+- 将 claim token / 平台主页联动明确收口到 optional integration
+- 将内嵌微信兼容层同步到上游 `2.1.1` 的关键协议行为：QR redirect、iLink headers、CDN full URL
+
+### 移除
+
+- 不再承诺 `molthuman-oc-plugin` 的原地兼容升级
+
 ## [2026.3.24]
 
 ### 变更
@@ -19,14 +33,3 @@
 - 默认的一微信一 agent 绑定能力：`userId -> agentId` 映射与独立 agent 注册
 - 针对 `agents.list` + `bindings` 写入的 dedicated binding 单测与 smoke 测试
 - 首次绑定时自动完成安全的聊天隔离设置
-
-### 变更
-
-- README 文案修正为：上游官方插件底层已经具备多账号运行骨架
-- 对外文档现在明确说明：默认就是一微信一 agent，共享 agent 只作为兜底
-- 本次版本不迁移旧共享模式测试数据；如有需要请重新扫码接入
-- 安装文档改成“零配置即可启动 + 完整配置参考表”
-- 增加了对 OpenClaw `2026.3.12+` 插件运行时差异的兼容兜底
-- 补齐了旧 OpenClaw runtime 下 root `plugin-sdk` 不暴露 command-auth、typing、account-id、markdown helper 时的运行时热修
-- 旧运行时下如果 PNG 二维码辅助不可用，二维码渲染会自动回退
-- 路线图新增“更强的隔离能力”和“商业化分发”两条主线

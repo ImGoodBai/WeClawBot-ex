@@ -1,253 +1,132 @@
-# WeClawBot-ex
+# ClawBNB Hub
 
-[简体中文](./README.zh_CN.md)
+Repository rename note: this public repository was previously published as `WeClawBot-ex`.
 
-Multi-account management layer for **WeChat ClawBot** (the official WeChat AI bot plugin by Tencent).
+`clawbnb-hub` is a standalone OpenClaw plugin that bundles:
 
-WeClawBot-ex is a productized fork of the official `@tencent-weixin/openclaw-weixin` plugin. It turns the upstream multi-account runtime into a visual, operator-friendly WeChat console.
+- the `clawbnb-weixin` channel runtime
+- the ClawBNB Hub local Weixin control console
+- the rental relay and proxy provider used by the ClawBNB platform stack
 
-## Current Status
+## Breaking Release
 
-The current public release supports:
+This release is a clean cut from `molthuman-oc-plugin`.
 
-- multiple WeChat accounts connected to one OpenClaw Gateway
-- one WeChat account mapped to one OpenClaw agent by default
-- a local control console for QR login and channel management
-- isolated chat context by default
-- auto-triggered channel reload after QR confirmation, with manual restart fallback
+- New package name: `clawbnb-hub`
+- New plugin entry id: `clawbnb-hub`
+- New channel id: `clawbnb-weixin`
+- New state namespace: `<OPENCLAW_STATE_DIR>/clawbnb-weixin/`
+- No automatic migration from `molthuman-oc-plugin`
+- Do not run `molthuman-oc-plugin` and `clawbnb-hub` in the same OpenClaw profile
 
-Older shared-agent test data is not migrated in this release. Reconnect old accounts if you are upgrading from an earlier private build.
+## Install
 
-## Console Preview
-
-<img src="./docs/weclawbot-ex-console-preview.png" alt="WeClawBot-ex console preview" width="980" />
-
-## Dedicated Agent Demo
-
-Two phones, one Gateway, two dedicated agents.
-
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <img src="./docs/weclawbot-ex-wechat-agent-a.jpg" alt="WeChat phone A bound to its own agent" width="280" />
-      <div><strong>Phone A -> Agent A</strong></div>
-      <div><code>workspace-wx-09c653a7</code></div>
-      <div>Own identity, own memory.</div>
-    </td>
-    <td align="center" width="50%">
-      <img src="./docs/weclawbot-ex-wechat-agent-b.png" alt="WeChat phone B bound to its own agent" width="280" />
-      <div><strong>Phone B -> Agent B</strong></div>
-      <div><code>workspace-wx-847277d3</code></div>
-      <div>Separate from Phone A.</div>
-    </td>
-  </tr>
-</table>
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js >= 22
-- [OpenClaw](https://docs.openclaw.ai/install) `>= 2026.3.12` installed (`openclaw` CLI available)
-
-### Compatibility Notes
-
-- `weclawbot-ex@2026.3.24` is the current published release.
-- This release was runtime-verified against local OpenClaw `2026.3.14` after the plugin-sdk compatibility hotfix.
-- For fresh installs, prefer OpenClaw `2026.3.22+` when possible, because the public npm release line has already moved there.
-- On newer OpenClaw builds, keep using explicit plugin-sdk subpaths such as `account-id`, `channel-config-schema`, `infra-runtime`, `media-runtime`, `command-auth`, and `text-runtime`. The root `openclaw/plugin-sdk` entry remains intentionally narrow upstream.
-
-### Install
+From npm:
 
 ```bash
-git clone https://github.com/ImGoodBai/WeClawBot-ex.git
-cd WeClawBot-ex
-openclaw plugins install .
+openclaw plugins install clawbnb-hub
 ```
 
-If you previously installed the official `openclaw-weixin` plugin locally, remove or disable it before testing WeClawBot-ex. Both plugins currently register the same runtime channel id (`openclaw-weixin`), so loading both at once can cause channel conflicts.
-
-In the same OpenClaw profile, the recommended state is:
-
-- `plugins.entries.weclawbot-ex.enabled = true`
-- `plugins.entries.openclaw-weixin.enabled = false`
-
-If you want both plugins available, keep them in separate profiles / separate `OPENCLAW_STATE_DIR` values.
-
-### Naming
-
-For compatibility, the current release still uses these runtime identifiers:
-
-- Product / repo name: `WeClawBot-ex`
-- npm package + plugin entry key: `weclawbot-ex`
-- Channel config key: `channels.openclaw-weixin`
-
-This is expected for the current version. A mixed-name log does not mean the wrong repository was installed.
-
-### Run
-
-For the default experience, no extra config is required after install:
+From a local checkout:
 
 ```bash
-openclaw gateway
+openclaw plugins install ./extensions/clawbnb-hub
 ```
 
-Then open **http://127.0.0.1:19120/**.
+## Migration
 
-### Configuration Reference
+1. Disable or uninstall `molthuman-oc-plugin`.
+2. Remove old config under `plugins.entries.molthuman-oc-plugin` and `channels.openclaw-weixin`.
+3. Install `clawbnb-hub`.
+4. Add the new config keys shown below.
+5. Re-scan Weixin accounts if you want them in the new `clawbnb-weixin` state namespace.
 
-Plugin config lives under `channels.openclaw-weixin` in `openclaw.json`.
+## Config Contract
 
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `agentBinding.enabled` | `boolean` | `true` | Enable one-WeChat-one-agent binding |
-| `agentBinding.maxAgents` | `number` | `20` | Dedicated agent limit; new users fall back to `main` after the limit |
-| `demoService.enabled` | `boolean` | `true` | Start the local Web console |
-| `demoService.port` | `number` | `19120` | Console port |
-| `demoService.bind` | `string` | `127.0.0.1` | Console bind address |
-| `demoService.restartCommand` | `string` | `openclaw gateway restart` | Manual restart command shown in diagnostics |
-| `baseUrl` | `string` | `https://ilinkai.weixin.qq.com` | Weixin iLink API endpoint |
-| `cdnBaseUrl` | `string` | `https://novac2c.cdn.weixin.qq.com/c2c` | Media CDN endpoint |
-| `logUploadUrl` | `string` | `-` | Optional log upload endpoint |
+Plugin-level relay and proxy settings stay under `plugins.entries.clawbnb-hub.config`:
 
-### Use
+```json
+{
+  "plugins": {
+    "entries": {
+      "clawbnb-hub": {
+        "enabled": true,
+        "config": {
+          "hostModelControl": "inherit",
+          "apiKey": "YOUR_AGENT_API_KEY",
+          "relayUrl": "ws://127.0.0.1:8787/ws/rental",
+          "proxyBaseUrl": "http://127.0.0.1:8787/api/rental-proxy"
+        }
+      }
+    }
+  }
+}
+```
 
-1. Start your OpenClaw Gateway
-2. Open **http://127.0.0.1:19120/**
-3. Click **Add WeChat Channel** — scan the QR code with WeChat
-4. After scan success, wait a few seconds for auto refresh
-5. If the new account still does not come online, run `openclaw gateway restart`
-6. Send a message from that WeChat account — the bound AI agent replies
+`hostModelControl` modes:
 
-Repeat step 3 for each additional WeChat account.
+- `inherit` (default): do not rewrite the host OpenClaw model/provider config; use whatever local model stack the Gateway already has
+- `proxy`: explicitly rewrite the host config to use the `molt-proxy` provider; requires an explicit `proxyBaseUrl`
 
-## FAQ And Architecture
+Upgrade note:
 
-- FAQ: [docs/faq.md](./docs/faq.md)
-- Architecture and isolation boundary: [docs/architecture.md](./docs/architecture.md)
+- Older `clawbnb-hub` builds could inject `molt-proxy` settings into the host OpenClaw profile.
+- Starting the updated plugin once with `hostModelControl: "inherit"` will scrub that old plugin-owned `molt-proxy` takeover state from the host profile.
 
-## Troubleshooting
+Weixin channel settings stay under `channels.clawbnb-weixin`:
 
-- `WARNING: Plugin "... contains dangerous code patterns"` is currently warn-only in OpenClaw. It is a scanner warning, not the install blocker.
-- `npm install failed` needs the full npm stderr before the root cause can be confirmed.
-- Check `node -v` first. This plugin requires Node.js `>= 22`.
-- Check `openclaw --version` next. The current release targets OpenClaw `>= 2026.3.12`.
-- If you are running OpenClaw `2026.3.14`, upgrade to `weclawbot-ex@2026.3.24` or newer before debugging message delivery. Older plugin builds can fail at runtime because some helpers are not exported from the root `plugin-sdk` entry on that host version.
-- If you upgrade OpenClaw later, re-run `openclaw plugins install .` and verify one real inbound/outbound message roundtrip. Upstream still evolves the SDK around explicit subpaths, not the root barrel.
-- After pulling a newer GitHub revision, run `openclaw plugins install .` again. OpenClaw runs the installed copy under `~/.openclaw/extensions`, not your working tree directly.
-- If the plugin installs but the console does not open, verify `channels.openclaw-weixin.demoService.enabled=true` and restart Gateway.
-- If the console still fails to boot, make sure the official `openclaw-weixin` plugin is not installed at the same time in the same OpenClaw profile.
-- If QR login succeeds but the new account does not receive messages, first wait for auto refresh, then use the manual restart command shown in the diagnostics panel.
-- If the QR image does not render as PNG on older runtimes, the console falls back to an SVG data URL automatically; this does not affect the login flow.
+```json
+{
+  "channels": {
+    "clawbnb-weixin": {
+      "baseUrl": "https://ilinkai.weixin.qq.com",
+      "cdnBaseUrl": "https://novac2c.cdn.weixin.qq.com/c2c",
+      "demoService": {
+        "enabled": true,
+        "bind": "127.0.0.1",
+        "port": 19120
+      }
+    }
+  }
+}
+```
+
+## Optional Integration
+
+The plugin works without platform-side profile linking.
+
+Optional integration points:
+
+- `MOLT_APP_BASE_URL`: used by the local console when generating public profile links
+- `INTERNAL_API_KEY`: used when calling platform-side profile binding endpoints
+- `/api/accounts/link-agent`: local console helper for linking a Weixin account to a public profile via claim token
+
+If you do not need public profile linking, you can ignore these settings entirely.
+
+## Repository Layout
+
+- `src/weixin/`: embedded Weixin runtime and local control console
+- `src/`: rental relay and proxy provider implementation
+- `tests/unit` and `tests/smoke`: Weixin regression coverage
+- `docs/faq.md`: operator FAQ
+- `docs/architecture.md`: routing and isolation model
 
 ## Quality Gate
 
-Run these before opening or merging a change:
+Run these before publishing:
 
 ```bash
+npm run typecheck
 npm run test:unit
 npm run test:smoke
-npm run test:gate
-npm run test:gate:full
+npm pack --dry-run --cache ./.npm-cache
 ```
 
-Current automated coverage focuses on:
+## Upstream
 
-- config-triggered channel reload and manual fallback
-- account snapshot / isolation diagnostics
-- control page render smoke
-- local demo service health
-- mock QR login flow without real WeChat devices
-
-`test:gate` is the current default closeout gate for this standalone repo.
-`test:gate:full` additionally runs `typecheck`, which still depends on upstream-derived imports being fully self-contained.
-
-## How It Works
-
-```
-WeChat A <-> WeClawBot-ex <-> OpenClaw Agent A
-WeChat B <-> WeClawBot-ex <-> OpenClaw Agent B
-WeChat C <-> WeClawBot-ex <-> OpenClaw Agent C
-```
-
-- Fork of the official `@tencent-weixin/openclaw-weixin` plugin (v1.0.2)
-- Extends the QR login module to support concurrent multi-session management
-- Adds a local web console (`src/service/`) for visual channel management
-- Chat context is separated by default for each WeChat account
-- Each stable WeChat user is bound to one dedicated OpenClaw agent by default
-- Agent workspace is separated by agent id
-- Tool/runtime side effects are still shared at the host level
-
-If you are specifically evaluating data isolation, read [docs/architecture.md](./docs/architecture.md). The short version is:
-
-- default mode: one WeChat account -> one dedicated agent
-- compatibility fallback: shared `main` agent only when dedicated binding cannot be completed
-- future stage: stronger workspace/tool/runtime isolation
-
-## What This Adds Over the Official ClawBot
-
-| | Official `openclaw-weixin` | WeClawBot-ex |
-|---|---|---|
-| Multi-account runtime | Supported, mainly via CLI workflow | Supported, with one local web console |
-| Agent mapping | Shared/manual operator setup | Default one WeChat -> one dedicated agent |
-| QR login experience | Terminal output | Browser QR with live status cards |
-| Account visibility | Mainly logs and local state | Aggregated dashboard and relogin actions |
-| Cooldown diagnostics | Manual inspection | Built-in `-14` visibility |
-| Chat isolation | Requires extra manual configuration | Enabled by default |
-
-## Maintenance Boundary
-
-- The upstream protocol/runtime layer is treated as frozen
-- Ongoing changes should stay in our own layer: `src/service/`, plugin packaging, and docs
-- Avoid editing upstream-derived files unless a compatibility fix is unavoidable
-
-## Roadmap
-
-### Stronger Isolation
-
-- [x] One WeChat account -> one OpenClaw agent
-- [ ] Explicit tool / runtime side-effect isolation
-- [ ] Harder tenant boundary enforcement
-
-### Commercial Distribution
-
-- [ ] Shareable QR codes for external distribution
-- [ ] Paid entry points per WeChat channel
-- [ ] Plugin-side billing and commercial distribution workflow
-
-## Common Questions
-
-### Does the official plugin already support multiple WeChat accounts?
-
-At the runtime layer, yes. The official plugin already has multi-account account storage and monitor startup logic. WeClawBot-ex focuses on management UX, QR workflow visibility, diagnostics, and operational packaging.
-
-### Is data fully isolated today?
-
-Not fully. One WeChat account now maps to one dedicated OpenClaw agent by default, and the agent workspace is separated by agent id, but tool/runtime side effects are still shared at the host level.
-
-### Is one WeChat account mapped to one agent today?
-
-Yes. That is now the default behavior of this repo. Shared-agent mode only remains as a compatibility fallback when dedicated binding cannot be completed.
-
-## Release Notes
-
-Full history: [CHANGELOG.md](./CHANGELOG.md).
-
-### 2026.3.23
-
-- Default one-WeChat-one-agent: each WeChat user binds to a dedicated agent by default
-- Zero-config startup: `openclaw gateway` is enough for first run; session isolation and agent binding auto-apply
-- Re-login keeps the same agent: rescanning the same WeChat account preserves the previous binding
-- Configuration reference: README now lists all supported config fields and defaults
-- Architecture + FAQ: public docs now explain official-plugin differences and the current isolation boundary
-- Automated quality gate: `npm run test:gate` covers binding logic, QR flow, and control-page rendering
+This project currently tracks `@tencent-weixin/openclaw-weixin@2.1.1` as the upstream runtime baseline.
+Upstream-derived files remain intentionally constrained; first-party work should stay in the control console, packaging, and docs layers.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE) and [NOTICE](./NOTICE) for upstream attribution.
-
-## WeChat Group
-
-Scan the QR code below to join the WeChat ClawBot exchange group:
-
-<img src="./docs/weclawbot-ex-wechat-group-qr.jpg" alt="WeClawBot-ex WeChat group QR" width="360" />
+MIT. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).

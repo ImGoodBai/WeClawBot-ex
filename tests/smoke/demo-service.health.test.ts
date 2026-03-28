@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { WeixinDemoHttpServer } from "../../src/service/http-server.js";
+import { WeixinDemoHttpServer } from "../../src/weixin/service/http-server.js";
 import { invokeHttpHandler } from "../helpers/http.js";
 import { createTempOpenClawEnv } from "../helpers/temp-env.js";
 
@@ -15,7 +15,7 @@ describe("demo service health smoke", () => {
         dmScope: "per-account-channel-peer",
       },
       channels: {
-        "openclaw-weixin": {
+        "clawbnb-weixin": {
           demoService: {
             enabled: true,
             bind: "127.0.0.1",
@@ -38,7 +38,7 @@ describe("demo service health smoke", () => {
           dmScope: "per-account-channel-peer",
         },
         channels: {
-          "openclaw-weixin": {
+          "clawbnb-weixin": {
             demoService: {
               enabled: true,
               bind: "127.0.0.1",

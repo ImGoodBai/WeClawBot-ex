@@ -1,15 +1,15 @@
-This project is a fork of @tencent-weixin/openclaw-weixin (v1.0.2),
+This project is a fork of @tencent-weixin/openclaw-weixin (v2.1.1),
 originally licensed under the MIT License by Tencent Inc.
 
 Original package:
 https://www.npmjs.com/package/@tencent-weixin/openclaw-weixin
 
-Modifications by MoltHuman:
-- Multi-account concurrent QR session management in src/auth/login-qr.ts
-- Extended config schema with demoService support in src/config/config-schema.ts
-- Local web management console in src/service/
-- Plugin entry registration for weclawbot-ex
+First-party modifications in this package include:
+- Multi-account concurrent QR session management in src/weixin/auth/login-qr.ts
+- Extended config schema with demoService support in src/weixin/config/config-schema.ts
+- Local web management console in src/weixin/service/
+- Plugin entry registration for clawbnb-hub
 
 Maintenance note:
-- The upstream-derived protocol/runtime layer is currently treated as frozen.
+- The upstream-derived protocol/runtime layer is treated as constrained.
 - Ongoing work should stay in the local service layer, packaging, and documentation unless a compatibility fix is required.

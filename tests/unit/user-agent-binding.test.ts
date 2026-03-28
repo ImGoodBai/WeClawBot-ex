@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createTempOpenClawEnv } from "../helpers/temp-env.js";
-import { resolveOrRegisterWeixinUserAgent } from "../../src/service/user-agent-binding.js";
+import { resolveOrRegisterWeixinUserAgent } from "../../src/weixin/service/user-agent-binding.js";
 
 let env: ReturnType<typeof createTempOpenClawEnv>;
 
@@ -17,7 +17,7 @@ describe("user-agent binding", () => {
         list: [{ id: "main" }],
       },
       channels: {
-        "openclaw-weixin": {
+        "clawbnb-weixin": {
           demoService: {
             enabled: true,
             bind: "127.0.0.1",
@@ -57,7 +57,7 @@ describe("user-agent binding", () => {
 
     expect(agentIds).toContain("main");
     expect(agentIds).toContain(result.agentId);
-    expect(binding?.match?.channel).toBe("openclaw-weixin");
+    expect(binding?.match?.channel).toBe("clawbnb-weixin");
     expect(binding?.agentId).toBe(result.agentId);
     expect((updated as { session?: { dmScope?: string } }).session?.dmScope).toBe(
       "per-account-channel-peer",
@@ -77,7 +77,7 @@ describe("user-agent binding", () => {
     expect(second.agentId).toBe(first.agentId);
     expect(second.created).toBe(false);
 
-    const mapPath = `${env.stateDir}/openclaw-weixin/user-agent-map.json`;
+    const mapPath = `${env.stateDir}/clawbnb-weixin/user-agent-map.json`;
     const map = JSON.parse(fs.readFileSync(mapPath, "utf-8")) as {
       users?: Record<string, { activeAccountId?: string; historyAccountIds?: string[] }>;
     };
@@ -115,7 +115,7 @@ describe("user-agent binding", () => {
       bindings?: Array<{ match?: { channel?: string; accountId?: string }; agentId?: string }>;
       session?: { dmScope?: string };
     };
-    const mapPath = `${env.stateDir}/openclaw-weixin/user-agent-map.json`;
+    const mapPath = `${env.stateDir}/clawbnb-weixin/user-agent-map.json`;
     const map = JSON.parse(fs.readFileSync(mapPath, "utf-8")) as {
       users?: Record<string, { agentId?: string; activeAccountId?: string }>;
     };
@@ -128,7 +128,7 @@ describe("user-agent binding", () => {
     expect(
       bindings.some(
         (item) =>
-          item.match?.channel === "openclaw-weixin" &&
+          item.match?.channel === "clawbnb-weixin" &&
           item.match?.accountId === "bot-a-im-bot" &&
           item.agentId === first.agentId,
       ),
@@ -136,7 +136,7 @@ describe("user-agent binding", () => {
     expect(
       bindings.some(
         (item) =>
-          item.match?.channel === "openclaw-weixin" &&
+          item.match?.channel === "clawbnb-weixin" &&
           item.match?.accountId === "bot-b-im-bot" &&
           item.agentId === second.agentId,
       ),
@@ -168,7 +168,7 @@ describe("user-agent binding", () => {
         list: [{ id: "main" }],
       },
       channels: {
-        "openclaw-weixin": {
+        "clawbnb-weixin": {
           demoService: {
             enabled: true,
             bind: "127.0.0.1",

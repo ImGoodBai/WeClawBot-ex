@@ -1,7 +1,7 @@
 node_modules/
 dist/
-coverage/
-.npm-cache/
-*.log
 .DS_Store
 tmp/
+.npm-cache/
+*.tgz
+coverage/

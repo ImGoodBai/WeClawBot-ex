@@ -23,20 +23,22 @@ const loginQrMocks = vi.hoisted(() => ({
     accountId: "bot@im.bot",
     baseUrl: "https://ilinkai.weixin.qq.com",
     userId: "wx-user-1",
+    agentToken: "agent-token-1",
+    callbackUrl: "http://127.0.0.1:3000/api/v1/agents/update-weixin-account",
     status: "confirmed",
     message: "confirmed",
     qrcodeUrl: "https://mock.weixin/qr/session-1",
   })),
 }));
 
-vi.mock("../../src/auth/login-qr.js", () => ({
+vi.mock("../../src/weixin/auth/login-qr.js", () => ({
   DEFAULT_ILINK_BOT_TYPE: "iLinkBot",
   startWeixinLoginWithQr: loginQrMocks.start,
   getWeixinLoginSnapshot: loginQrMocks.snapshot,
   pollWeixinLoginStatusOnce: loginQrMocks.poll,
 }));
 
-import { WeixinDemoHttpServer } from "../../src/service/http-server.js";
+import { WeixinDemoHttpServer } from "../../src/weixin/service/http-server.js";
 
 let env: ReturnType<typeof createTempOpenClawEnv>;
 let server: WeixinDemoHttpServer | null = null;
@@ -52,7 +54,7 @@ describe("mock qr flow smoke", () => {
         list: [{ id: "main" }],
       },
       channels: {
-        "openclaw-weixin": {
+        "clawbnb-weixin": {
           demoService: {
             enabled: true,
             bind: "127.0.0.1",
@@ -67,6 +69,7 @@ describe("mock qr flow smoke", () => {
       },
     });
 
+    process.env.INTERNAL_API_KEY = "demo-internal-key";
     server = new WeixinDemoHttpServer({
       logger: {
         info() {},
@@ -79,7 +82,7 @@ describe("mock qr flow smoke", () => {
           dmScope: "per-account-channel-peer",
         },
         channels: {
-          "openclaw-weixin": {
+          "clawbnb-weixin": {
             demoService: {
               enabled: true,
               bind: "127.0.0.1",
@@ -103,14 +106,26 @@ describe("mock qr flow smoke", () => {
       server = null;
     }
     env?.cleanup();
+    delete process.env.INTERNAL_API_KEY;
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
     vi.clearAllMocks();
   });
 
   it("creates a QR session and persists the account on confirm", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () => "",
+    }));
+    vi.stubGlobal("fetch", fetchMock as never);
+
     const createResult = await invokeHttpHandler(server as never, {
       method: "POST",
       url: "/api/qr/create",
-      body: {},
+      body: {
+        agentToken: "agent-token-1",
+        callbackUrl: "http://127.0.0.1:3000/api/v1/agents/update-weixin-account",
+      },
     });
 
     expect(createResult.statusCode).toBe(200);
@@ -130,25 +145,26 @@ describe("mock qr flow smoke", () => {
     expect(statusResult.json.binding.fallback).toBe(false);
     expect(statusResult.json.activation.mode).toBe("auto");
     expect(statusResult.json.activation.triggered).toBe(true);
+    expect(statusResult.json.platformSync.ok).toBe(true);
 
     const normalizedAccountId = "bot-im-bot";
     const accountPath = path.join(
       env.stateDir,
-      "openclaw-weixin",
+      "clawbnb-weixin",
       "accounts",
       `${normalizedAccountId}.json`,
     );
-    const indexPath = path.join(env.stateDir, "openclaw-weixin", "accounts.json");
+    const indexPath = path.join(env.stateDir, "clawbnb-weixin", "accounts.json");
     const config = JSON.parse(fs.readFileSync(env.configPath, "utf-8")) as {
       agents?: { list?: Array<{ id?: string }> };
       bindings?: Array<{ match?: { channel?: string; accountId?: string }; agentId?: string }>;
       channels?: {
-        "openclaw-weixin"?: {
+        "clawbnb-weixin"?: {
           demoService?: { reloadNonce?: string };
         };
       };
     };
-    const mapPath = path.join(env.stateDir, "openclaw-weixin", "user-agent-map.json");
+    const mapPath = path.join(env.stateDir, "clawbnb-weixin", "user-agent-map.json");
     const agentId = statusResult.json.binding.agentId as string;
 
     expect(fs.existsSync(accountPath)).toBe(true);
@@ -158,13 +174,104 @@ describe("mock qr flow smoke", () => {
     expect(
       config.bindings?.some(
         (item) =>
-          item.match?.channel === "openclaw-weixin" &&
+          item.match?.channel === "clawbnb-weixin" &&
           item.match?.accountId === normalizedAccountId &&
           item.agentId === agentId,
       ),
     ).toBe(true);
-    expect(config.channels?.["openclaw-weixin"]?.demoService?.reloadNonce).toMatch(
+    expect(config.channels?.["clawbnb-weixin"]?.demoService?.reloadNonce).toMatch(
       /^\d{4}-\d{2}-\d{2}T/,
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:3000/api/v1/agents/update-weixin-account",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "content-type": "application/json",
+          "x-internal-key": "demo-internal-key",
+        }),
+      }),
+    );
+  });
+
+  it("finalizes a QR session in the background even when the page stops polling", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () => "",
+    }));
+    vi.stubGlobal("fetch", fetchMock as never);
+
+    const createResult = await invokeHttpHandler(server as never, {
+      method: "POST",
+      url: "/api/qr/create",
+      body: {
+        agentToken: "agent-token-1",
+        callbackUrl: "http://127.0.0.1:3000/api/v1/agents/update-weixin-account",
+      },
+    });
+
+    expect(createResult.statusCode).toBe(200);
+    expect(createResult.json.sessionKey).toBe("session-1");
+
+    await vi.advanceTimersByTimeAsync(2_600);
+
+    const normalizedAccountId = "bot-im-bot";
+    const accountPath = path.join(
+      env.stateDir,
+      "clawbnb-weixin",
+      "accounts",
+      `${normalizedAccountId}.json`,
+    );
+
+    expect(fs.existsSync(accountPath)).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:3000/api/v1/agents/update-weixin-account",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
+
+  });
+
+  it("defaults QR create to reuse current session unless force is requested", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () => "",
+    }));
+    vi.stubGlobal("fetch", fetchMock as never);
+
+    await invokeHttpHandler(server as never, {
+      method: "POST",
+      url: "/api/qr/create",
+      body: {
+        accountId: "bot-im-bot",
+        agentToken: "agent-token-1",
+      },
+    });
+
+    expect(loginQrMocks.start).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        accountId: "bot-im-bot",
+        force: false,
+      }),
+    );
+
+    await invokeHttpHandler(server as never, {
+      method: "POST",
+      url: "/api/qr/create",
+      body: {
+        accountId: "bot-im-bot",
+        agentToken: "agent-token-1",
+        force: true,
+      },
+    });
+
+    expect(loginQrMocks.start).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        accountId: "bot-im-bot",
+        force: true,
+      }),
     );
   });
 });

@@ -4,6 +4,20 @@
 
 This project follows the [Keep a Changelog](https://keepachangelog.com/) format.
 
+## [2026.3.28]
+
+### Changed
+
+- renamed the public package, plugin id, and repository identity to `clawbnb-hub`
+- renamed the Weixin channel id and state namespace to `clawbnb-weixin`
+- rewrote install and migration docs for a clean break from `molthuman-oc-plugin`
+- moved profile-linking helpers into an explicit optional-integration section
+- synced the embedded Weixin compatibility layer to the upstream `2.1.1` protocol behavior for QR redirect, iLink headers, and CDN full URLs
+
+### Removed
+
+- in-place compatibility promises for `molthuman-oc-plugin`
+
 ## [2026.3.24]
 
 ### Changed
@@ -21,14 +35,3 @@ This project follows the [Keep a Changelog](https://keepachangelog.com/) format.
 - default one-WeChat-one-agent binding with `userId -> agentId` mapping and dedicated-agent registration
 - dedicated binding unit and smoke coverage for `agents.list` + `bindings` writes
 - automatic safe chat-isolation setup
-
-### Changed
-
-- README wording now correctly states that the upstream plugin already has multi-account runtime foundations
-- public docs now explain default one-WeChat-one-agent behavior and shared-agent fallback
-- this release drops migration support for old shared-agent test data; reconnect old accounts if needed
-- install docs now describe zero-config startup plus a full configuration reference
-- compatibility fallback added for OpenClaw `2026.3.12+` plugin-sdk runtime differences
-- runtime hotfix completed for older OpenClaw builds that do not expose command-auth, typing, account-id, or markdown helpers on the root `plugin-sdk` entry
-- QR rendering now falls back cleanly when older runtimes cannot provide the PNG helper path
-- roadmap now includes stronger isolation and commercial distribution as explicit tracks

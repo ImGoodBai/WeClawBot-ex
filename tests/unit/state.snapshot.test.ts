@@ -3,14 +3,17 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { pauseSession, _resetForTest as resetSessionGuard } from "../../src/api/session-guard.js";
-import { buildDemoAccountsSnapshot } from "../../src/service/state.js";
+import {
+  pauseSession,
+  _resetForTest as resetSessionGuard,
+} from "../../src/weixin/api/session-guard.js";
+import { buildDemoAccountsSnapshot } from "../../src/weixin/service/state.js";
 import { createTempOpenClawEnv } from "../helpers/temp-env.js";
 
 let env: ReturnType<typeof createTempOpenClawEnv>;
 
 function writeAccount(accountId: string, data: Record<string, unknown>): void {
-  const accountsDir = path.join(env.stateDir, "openclaw-weixin", "accounts");
+  const accountsDir = path.join(env.stateDir, "clawbnb-weixin", "accounts");
   fs.mkdirSync(accountsDir, { recursive: true });
   fs.writeFileSync(
     path.join(accountsDir, `${accountId}.json`),
@@ -30,7 +33,7 @@ describe("demo account snapshot", () => {
   });
 
   it("groups duplicate records and emits isolation diagnostics", () => {
-    const stateDir = path.join(env.stateDir, "openclaw-weixin");
+    const stateDir = path.join(env.stateDir, "clawbnb-weixin");
     fs.mkdirSync(stateDir, { recursive: true });
     fs.writeFileSync(
       path.join(stateDir, "accounts.json"),
@@ -75,7 +78,7 @@ describe("demo account snapshot", () => {
     const snapshot = buildDemoAccountsSnapshot({
       session: { dmScope: "main" },
       channels: {
-        "openclaw-weixin": {
+        "clawbnb-weixin": {
           agentBinding: {
             enabled: true,
             maxAgents: 20,
@@ -100,13 +103,13 @@ describe("demo account snapshot", () => {
     expect(snapshot.diagnostics.some((item) => item.kind === "missing-user-id")).toBe(true);
   });
 
-  it("emits a diagnostic when the official plugin is still enabled in the same profile", () => {
-    const officialInstallPath = path.join(env.stateDir, "extensions", "openclaw-weixin");
-    fs.mkdirSync(officialInstallPath, { recursive: true });
+  it("emits a diagnostic when the legacy plugin is still enabled in the same profile", () => {
+    const legacyInstallPath = path.join(env.stateDir, "extensions", "molthuman-oc-plugin");
+    fs.mkdirSync(legacyInstallPath, { recursive: true });
 
     const snapshot = buildDemoAccountsSnapshot({
       channels: {
-        "openclaw-weixin": {
+        "clawbnb-weixin": {
           agentBinding: {
             enabled: true,
             maxAgents: 20,
@@ -115,18 +118,37 @@ describe("demo account snapshot", () => {
       },
       plugins: {
         entries: {
-          "openclaw-weixin": {
+          "molthuman-oc-plugin": {
             enabled: true,
           },
         },
         installs: {
-          "openclaw-weixin": {
-            installPath: officialInstallPath,
+          "molthuman-oc-plugin": {
+            installPath: legacyInstallPath,
           },
         },
       },
     } as never);
 
     expect(snapshot.diagnostics.some((item) => item.kind === "plugin-conflict")).toBe(true);
+  });
+
+  it("exposes pinned runtime paths from env-backed state", () => {
+    const snapshot = buildDemoAccountsSnapshot({
+      channels: {
+        "clawbnb-weixin": {
+          agentBinding: {
+            enabled: true,
+            maxAgents: 20,
+          },
+        },
+      },
+    } as never);
+
+    expect(snapshot.runtime.stateDir).toBe(env.stateDir);
+    expect(snapshot.runtime.configPath).toBe(env.configPath);
+    expect(snapshot.runtime.stateDirPinned).toBe(true);
+    expect(snapshot.runtime.configPathPinned).toBe(true);
+    expect(snapshot.diagnostics.some((item) => item.kind === "runtime-state")).toBe(false);
   });
 });

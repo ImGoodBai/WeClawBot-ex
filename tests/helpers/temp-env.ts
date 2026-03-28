@@ -16,7 +16,7 @@ const DEFAULT_CONFIG = {
     dmScope: "per-account-channel-peer",
   },
   channels: {
-    "openclaw-weixin": {
+    "clawbnb-weixin": {
       baseUrl: "https://ilinkai.weixin.qq.com",
       agentBinding: {
         enabled: true,
@@ -35,7 +35,7 @@ const DEFAULT_CONFIG = {
 export function createTempOpenClawEnv(
   config: Record<string, unknown> = DEFAULT_CONFIG as Record<string, unknown>,
 ): TempOpenClawEnv {
-  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "weclawbot-ex-test-"));
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawbnb-hub-test-"));
   const stateDir = path.join(rootDir, "state");
   const configPath = path.join(rootDir, "openclaw.json");
   fs.mkdirSync(stateDir, { recursive: true });

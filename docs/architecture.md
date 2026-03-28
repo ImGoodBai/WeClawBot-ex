@@ -2,79 +2,60 @@
 
 ## Current Model
 
-Current public releases of WeClawBot-ex support two routing modes:
+`clawbnb-hub` embeds a Weixin control console and routes users in two modes:
 
 ```text
 Default mode:
-WeChat A <-> WeClawBot-ex <-> OpenClaw Agent A
-WeChat B <-> WeClawBot-ex <-> OpenClaw Agent B
-WeChat C <-> WeClawBot-ex <-> OpenClaw Agent C
+WeChat A <-> ClawBNB Hub Weixin Console <-> OpenClaw Agent A
+WeChat B <-> ClawBNB Hub Weixin Console <-> OpenClaw Agent B
+WeChat C <-> ClawBNB Hub Weixin Console <-> OpenClaw Agent C
 
 Fallback mode:
-WeChat X <-> WeClawBot-ex <-> main
+WeChat X <-> ClawBNB Hub Weixin Console <-> main
 ```
 
 This means:
 
 - one OpenClaw Gateway process
-- multiple WeChat channel accounts
+- multiple WeChat accounts
 - one dedicated OpenClaw agent per stable WeChat user by default
-- shared `main` agent only as a fallback path
+- shared `main` only as a fallback path
 - chat context separated by default
 
-## What WeClawBot-ex Adds
+## What This Plugin Adds
 
-Compared with the upstream `@tencent-weixin/openclaw-weixin` plugin, WeClawBot-ex mainly adds:
+Compared with the upstream `@tencent-weixin/openclaw-weixin` runtime, `clawbnb-hub` mainly adds:
 
-- a local Web control console
-- QR login state polling
-- account aggregation and relogin UX
-- cooldown visibility for `-14`
+- a local web control console
+- QR login polling and relogin flows
+- aggregated account visibility
+- cooldown diagnostics for `-14`
 - auto-triggered channel reload after QR confirmation
-- default userId -> agentId binding with dedicated agent registration
-- a minimal automated quality gate
-
-The upstream plugin already contains much of the multi-account runtime skeleton.  
-WeClawBot-ex focuses on management, operator workflow, and productization.
+- default `userId -> agentId` binding with dedicated-agent registration
 
 ## Isolation Boundary Today
 
-### Already isolated
+Already isolated:
 
-- account credentials are stored per account
-- each account runs its own long-poll monitor
-- `context_token` is tracked per account / user pair
-- chat context is separated per WeChat account
-- dedicated agent routing is enabled per stable WeChat user by default
-- agent workspace separates naturally by agent id
+- per-account credentials
+- per-account long-poll monitor state
+- per-account/user `context_token`
+- direct-message chat context
+- dedicated agent routing for stable WeChat users
 
-### Not fully isolated yet
+Not fully isolated yet:
 
-- shared `main` is still used as a fallback when dedicated binding cannot be completed
-- existing early shared-agent test data is not migrated in this release
-- tool execution environment is shared
-- runtime side effects are shared
+- shared `main` is still the fallback when dedicated binding cannot be completed
+- old `molthuman-oc-plugin` state is not migrated automatically
+- tool execution and other runtime side effects are still shared
 
-So the current release solves **conversation cross-talk** and can route one WeChat account to one agent, but it still does not provide full tenant-level hard isolation.
+## Migration Boundary
 
-## Planned Next Stage
+This release does not attempt to share runtime ids with `molthuman-oc-plugin`.
 
-The next major architecture step is to harden the dedicated-agent mode:
+- old plugin id: `molthuman-oc-plugin`
+- new plugin id: `clawbnb-hub`
+- old channel id: `openclaw-weixin`
+- new channel id: `clawbnb-weixin`
 
-- workspace bootstrap and lifecycle per agent
-- clearer migration path from shared-agent installs
-- stronger tenant boundaries
-- less risk of shared tool/runtime side effects
-
-## Commercial Direction
-
-WeClawBot-ex is also designed toward future commercial distribution:
-
-- shareable QR entry points
-- charging per WeChat entry
-- distribution-friendly plugin workflow
-
-That commercial path depends on two foundations:
-
-1. stronger isolation
-2. cleaner distribution and billing flows
+That keeps the new package clean, but it means users may need to reinstall and re-scan.
