@@ -52,6 +52,7 @@ Plugin-level relay and proxy settings stay under `plugins.entries.clawbnb-hub.co
       "clawbnb-hub": {
         "enabled": true,
         "config": {
+          "hostModelControl": "inherit",
           "apiKey": "YOUR_AGENT_API_KEY",
           "relayUrl": "ws://127.0.0.1:8787/ws/rental",
           "proxyBaseUrl": "http://127.0.0.1:8787/api/rental-proxy"
@@ -61,6 +62,16 @@ Plugin-level relay and proxy settings stay under `plugins.entries.clawbnb-hub.co
   }
 }
 ```
+
+`hostModelControl` modes:
+
+- `inherit` (default): do not rewrite the host OpenClaw model/provider config; use whatever local model stack the Gateway already has
+- `proxy`: explicitly rewrite the host config to use the `molt-proxy` provider; requires an explicit `proxyBaseUrl`
+
+Upgrade note:
+
+- Older `clawbnb-hub` builds could inject `molt-proxy` settings into the host OpenClaw profile.
+- Starting the updated plugin once with `hostModelControl: "inherit"` will scrub that old plugin-owned `molt-proxy` takeover state from the host profile.
 
 Weixin channel settings stay under `channels.clawbnb-weixin`:
 

@@ -1,14 +1,15 @@
 import type { OpenClawConfig } from "openclaw/plugin-sdk/core";
 import type { ModelProviderConfig } from "openclaw/plugin-sdk/provider-models";
 import {
+  DEFAULT_HOST_MODEL_CONTROL,
   DEFAULT_HEARTBEAT_INTERVAL_MS,
-  DEFAULT_PROXY_BASE_URL,
   DEFAULT_PROXY_MODEL_ID,
   DEFAULT_RECONNECT_BASE_DELAY_MS,
   DEFAULT_RECONNECT_MAX_DELAY_MS,
   DEFAULT_RUN_TIMEOUT_MS,
   DEFAULT_TEMP_ROOT,
   DEFAULT_TOOL_REFUSAL_TEXT,
+  type HostModelControlMode,
   MOLT_MARKET_PLUGIN_ID,
   MOLT_PROXY_PLACEHOLDER_API_KEY,
   MOLT_PROXY_PROVIDER_ID,
@@ -16,6 +17,7 @@ import {
 
 export type ResolvedMoltMarketConfig = {
   enabled: boolean;
+  hostModelControl: HostModelControlMode;
   apiKey: string;
   relayUrl: string;
   proxyBaseUrl: string;
@@ -35,9 +37,7 @@ export type ResolvedMoltMarketConfig = {
 type JsonRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): JsonRecord {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as JsonRecord)
-    : {};
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
 }
 
 function asTrimmedString(value: unknown, fallback = ""): string {
@@ -61,17 +61,34 @@ function asPositiveInt(value: unknown, fallback: number): number {
 }
 
 function normalizeProxyBaseUrl(value: unknown): string {
-  const trimmed = asTrimmedString(value, DEFAULT_PROXY_BASE_URL).replace(/\/+$/u, "");
+  const trimmed = asTrimmedString(value).replace(/\/+$/u, "");
   if (!trimmed) {
-    return DEFAULT_PROXY_BASE_URL;
+    return "";
   }
   return /\/v1$/iu.test(trimmed) ? trimmed : `${trimmed}/v1`;
+}
+
+function normalizeHostModelControl(value: unknown): HostModelControlMode {
+  if (value === "proxy") {
+    return "proxy";
+  }
+  return DEFAULT_HOST_MODEL_CONTROL as HostModelControlMode;
+}
+
+function omitUndefinedRecord<TValue>(
+  record: Record<string, TValue | undefined>,
+): Record<string, TValue> | undefined {
+  const entries = Object.entries(record).filter(([, value]) => value !== undefined) as Array<
+    [string, TValue]
+  >;
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 export function resolveMoltMarketConfig(raw: unknown): ResolvedMoltMarketConfig {
   const record = asRecord(raw);
   return {
     enabled: record.enabled !== false,
+    hostModelControl: normalizeHostModelControl(record.hostModelControl),
     apiKey: asTrimmedString(record.apiKey),
     relayUrl: asTrimmedString(record.relayUrl),
     proxyBaseUrl: normalizeProxyBaseUrl(record.proxyBaseUrl),
@@ -139,6 +156,87 @@ export function ensureMoltProxyRuntimeConfig(
   cfg: OpenClawConfig,
   pluginConfig: ResolvedMoltMarketConfig,
 ): { changed: boolean; nextConfig: OpenClawConfig } {
+  if (pluginConfig.hostModelControl !== "proxy") {
+    const currentPluginEntry = asRecord(cfg.plugins?.entries?.[MOLT_MARKET_PLUGIN_ID]);
+    const currentPluginConfig = { ...asRecord(currentPluginEntry.config) };
+    const currentSubagent = { ...asRecord(currentPluginEntry.subagent) };
+    const currentAllowedModels = asStringArray(currentSubagent.allowedModels);
+    const currentAgentModels = cfg.agents?.defaults?.models ?? {};
+    const prunedAgentModels = Object.fromEntries(
+      Object.entries(currentAgentModels).filter(([modelRef, value]) => {
+        const alias = asTrimmedString(asRecord(value).alias);
+        return !(
+          modelRef.startsWith(`${MOLT_PROXY_PROVIDER_ID}/`) && alias === MOLT_MARKET_PLUGIN_ID
+        );
+      }),
+    ) as Record<string, unknown>;
+    const nextAllowedModels = currentAllowedModels.filter(
+      (modelRef) => !modelRef.startsWith(`${MOLT_PROXY_PROVIDER_ID}/`),
+    );
+    const hadLegacyPluginConfig =
+      typeof currentPluginConfig.proxyBaseUrl === "string" ||
+      typeof currentPluginConfig.proxyModelId === "string";
+    const hadLegacyAllowedModels = nextAllowedModels.length !== currentAllowedModels.length;
+    const hadLegacyAgentAliases =
+      Object.keys(prunedAgentModels).length !== Object.keys(currentAgentModels).length;
+    const hadLegacyProvider = cfg.models?.providers?.[MOLT_PROXY_PROVIDER_ID] !== undefined;
+
+    if (
+      !hadLegacyPluginConfig &&
+      !hadLegacyAllowedModels &&
+      !hadLegacyAgentAliases &&
+      !hadLegacyProvider
+    ) {
+      return { changed: false, nextConfig: cfg };
+    }
+
+    delete currentPluginConfig.proxyBaseUrl;
+    delete currentPluginConfig.proxyModelId;
+    const nextPluginEntry = {
+      ...currentPluginEntry,
+      config: omitUndefinedRecord({
+        ...currentPluginConfig,
+      }),
+      subagent: omitUndefinedRecord({
+        ...currentSubagent,
+        allowModelOverride:
+          nextAllowedModels.length > 0 ? currentSubagent.allowModelOverride : undefined,
+        allowedModels: nextAllowedModels.length > 0 ? nextAllowedModels : undefined,
+      }),
+    };
+    const nextProviders = { ...(cfg.models?.providers ?? {}) };
+    delete nextProviders[MOLT_PROXY_PROVIDER_ID];
+
+    return {
+      changed: true,
+      nextConfig: {
+        ...cfg,
+        models: {
+          ...cfg.models,
+          providers: omitUndefinedRecord(nextProviders),
+        },
+        agents: {
+          ...cfg.agents,
+          defaults: {
+            ...cfg.agents?.defaults,
+            models: omitUndefinedRecord(prunedAgentModels),
+          },
+        },
+        plugins: {
+          ...cfg.plugins,
+          entries: {
+            ...(cfg.plugins?.entries ?? {}),
+            [MOLT_MARKET_PLUGIN_ID]: nextPluginEntry,
+          },
+        },
+      },
+    };
+  }
+  if (!pluginConfig.proxyBaseUrl) {
+    throw new Error(
+      "clawbnb-hub hostModelControl=proxy requires plugins.entries.clawbnb-hub.config.proxyBaseUrl",
+    );
+  }
   const currentProvider = cfg.models?.providers?.[MOLT_PROXY_PROVIDER_ID];
   const nextProvider = buildMoltProxyProviderConfig(pluginConfig, currentProvider);
   const currentAgentModels = cfg.agents?.defaults?.models ?? {};

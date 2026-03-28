@@ -54,6 +54,7 @@ openclaw plugins install ./extensions/clawbnb-hub
       "clawbnb-hub": {
         "enabled": true,
         "config": {
+          "hostModelControl": "inherit",
           "apiKey": "YOUR_AGENT_API_KEY",
           "relayUrl": "ws://127.0.0.1:8787/ws/rental",
           "proxyBaseUrl": "http://127.0.0.1:8787/api/rental-proxy"
@@ -63,6 +64,16 @@ openclaw plugins install ./extensions/clawbnb-hub
   }
 }
 ```
+
+`hostModelControl` 模式：
+
+- `inherit`（默认）：不改写宿主 OpenClaw 的模型 / provider 配置，直接沿用 Gateway 当前已有的本地模型能力
+- `proxy`：显式接管宿主配置并切到 `molt-proxy` provider；必须显式提供 `proxyBaseUrl`
+
+升级说明：
+
+- 旧版本 `clawbnb-hub` 可能会把 `molt-proxy` 相关设置写进宿主 OpenClaw profile。
+- 升级后只要用 `hostModelControl: "inherit"` 启动一次，插件会自动清掉这部分旧的插件接管痕迹。
 
 微信 channel 配置写在 `channels.clawbnb-weixin`：
 

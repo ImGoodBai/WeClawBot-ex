@@ -2,18 +2,18 @@
   "id": "clawbnb-hub",
   "name": "ClawBNB Hub",
   "description": "ClawBNB Hub Weixin channel, rental relay, proxy provider, and rental-session safety hooks.",
-  "channels": [
-    "clawbnb-weixin"
-  ],
-  "providers": [
-    "molt-proxy"
-  ],
+  "channels": ["clawbnb-weixin"],
+  "providers": ["molt-proxy"],
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
       "enabled": {
         "type": "boolean"
+      },
+      "hostModelControl": {
+        "type": "string",
+        "enum": ["inherit", "proxy"]
       },
       "apiKey": {
         "type": "string"
@@ -35,9 +35,7 @@
       },
       "capabilityLevel": {
         "type": "string",
-        "enum": [
-          "chat_only"
-        ]
+        "enum": ["chat_only"]
       },
       "version": {
         "type": "string"
