@@ -1,0 +1,91 @@
+{
+  "name": "clawbnb-hub",
+  "version": "2026.3.28",
+  "description": "ClawBNB Hub OpenClaw plugin with Weixin channel, rental relay, and proxy provider",
+  "keywords": [
+    "clawbnb",
+    "hub",
+    "openclaw",
+    "plugin",
+    "weixin",
+    "rental",
+    "relay",
+    "proxy"
+  ],
+  "homepage": "https://github.com/ImGoodBai/clawbnb-hub#readme",
+  "bugs": {
+    "url": "https://github.com/ImGoodBai/clawbnb-hub/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ImGoodBai/clawbnb-hub.git"
+  },
+  "type": "module",
+  "files": [
+    "README.md",
+    "index.ts",
+    "openclaw.plugin.json",
+    "src/",
+    "!src/**/*.test.ts",
+    "!src/**/node_modules/"
+  ],
+  "scripts": {
+    "test": "vitest run --coverage",
+    "test:unit": "vitest run src/*.test.ts tests/unit",
+    "test:smoke": "vitest run tests/smoke",
+    "test:gate": "npm run typecheck && npm run test:unit && npm run test:smoke && npm pack --dry-run --cache ./.npm-cache",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "prepublishOnly": "npm run test:gate"
+  },
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "dependencies": {
+    "@mariozechner/pi-agent-core": "0.58.0",
+    "@mariozechner/pi-ai": "0.60.0",
+    "qrcode-terminal": "0.12.0",
+    "ws": "^8.19.0",
+    "zod": "4.3.6"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.3.22"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.1.0",
+    "openclaw": "file:./tests/stubs/openclaw",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "channel": {
+      "id": "clawbnb-weixin",
+      "label": "clawbnb-weixin",
+      "selectionLabel": "clawbnb-weixin",
+      "docsPath": "/channels/clawbnb-weixin",
+      "docsLabel": "clawbnb-weixin",
+      "blurb": "Weixin channel",
+      "order": 75
+    },
+    "install": {
+      "npmSpec": "clawbnb-hub",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.3.22"
+    },
+    "release": {
+      "publishToNpm": true
+    }
+  }
+}

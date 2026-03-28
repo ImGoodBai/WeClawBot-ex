@@ -1,0 +1,15 @@
+{
+  "name": "openclaw",
+  "version": "0.0.0-test-stub",
+  "type": "module",
+  "exports": {
+    "./plugin-sdk": "./plugin-sdk/index.js",
+    "./plugin-sdk/account-id": "./plugin-sdk/account-id.js",
+    "./plugin-sdk/channel-config-schema": "./plugin-sdk/channel-config-schema.js",
+    "./plugin-sdk/core": "./plugin-sdk/core.js",
+    "./plugin-sdk/infra-runtime": "./plugin-sdk/infra-runtime.js",
+    "./plugin-sdk/media-runtime": "./plugin-sdk/media-runtime.js",
+    "./plugin-sdk/provider-catalog": "./plugin-sdk/provider-catalog.js",
+    "./plugin-sdk/provider-models": "./plugin-sdk/provider-models.js"
+  }
+}

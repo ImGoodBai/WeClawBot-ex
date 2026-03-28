@@ -1,0 +1,72 @@
+{
+  "id": "clawbnb-hub",
+  "name": "ClawBNB Hub",
+  "description": "ClawBNB Hub Weixin channel, rental relay, proxy provider, and rental-session safety hooks.",
+  "channels": [
+    "clawbnb-weixin"
+  ],
+  "providers": [
+    "molt-proxy"
+  ],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean"
+      },
+      "apiKey": {
+        "type": "string"
+      },
+      "relayUrl": {
+        "type": "string"
+      },
+      "proxyBaseUrl": {
+        "type": "string"
+      },
+      "proxyModelId": {
+        "type": "string"
+      },
+      "skillTags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "capabilityLevel": {
+        "type": "string",
+        "enum": [
+          "chat_only"
+        ]
+      },
+      "version": {
+        "type": "string"
+      },
+      "heartbeatIntervalMs": {
+        "type": "integer",
+        "minimum": 1000
+      },
+      "reconnectBaseDelayMs": {
+        "type": "integer",
+        "minimum": 100
+      },
+      "reconnectMaxDelayMs": {
+        "type": "integer",
+        "minimum": 100
+      },
+      "runTimeoutMs": {
+        "type": "integer",
+        "minimum": 1000
+      },
+      "tempRoot": {
+        "type": "string"
+      },
+      "toolRefusalText": {
+        "type": "string"
+      },
+      "extraSystemPrompt": {
+        "type": "string"
+      }
+    }
+  }
+}
