@@ -21,17 +21,36 @@ This release is a clean cut from `molthuman-oc-plugin`.
 
 ## Install
 
-From npm:
+Requirements:
+
+- OpenClaw `>=2026.3.22`
+- Node `>=22.16.0` when installing from a GitHub checkout
+
+From a GitHub checkout (recommended today):
 
 ```bash
-openclaw plugins install clawbnb-hub
+cd clawbnb-hub
+npm install
+openclaw plugins install .
 ```
 
-From a local checkout:
+From a local release tarball:
 
 ```bash
-openclaw plugins install ./extensions/clawbnb-hub
+cd clawbnb-hub
+npm pack --cache ./.npm-cache
+openclaw plugins install ./clawbnb-hub-<version>.tgz
 ```
+
+Current npm status:
+
+- `clawbnb-hub` is not yet published to npm
+- do not use `openclaw plugins install clawbnb-hub` until a published npm release exists
+
+First-install note:
+
+- OpenClaw may warn about `dangerous code patterns` or `plugins.allow` trust when you install from source or a local artifact
+- that warning is expected for this plugin because it reads env vars and exposes local HTTP callbacks for the control console and optional platform linking
 
 ## Migration
 

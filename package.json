@@ -81,12 +81,10 @@
       "order": 75
     },
     "install": {
-      "npmSpec": "clawbnb-hub",
-      "defaultChoice": "npm",
       "minHostVersion": ">=2026.3.22"
     },
     "release": {
-      "publishToNpm": true
+      "publishToNpm": false
     }
   }
 }

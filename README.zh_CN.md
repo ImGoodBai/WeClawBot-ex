@@ -23,17 +23,36 @@
 
 ## 安装
 
-从 npm 安装：
+环境要求：
+
+- OpenClaw `>=2026.3.22`
+- Node `>=22.16.0`
+
+从 GitHub 仓库源码安装（当前推荐）：
 
 ```bash
-openclaw plugins install clawbnb-hub
+cd clawbnb-hub
+npm install
+openclaw plugins install .
 ```
 
-从本地工作区安装：
+从本地 release tarball 安装：
 
 ```bash
-openclaw plugins install ./extensions/clawbnb-hub
+cd clawbnb-hub
+npm pack --cache ./.npm-cache
+openclaw plugins install ./clawbnb-hub-<version>.tgz
 ```
+
+当前 npm 状态：
+
+- `clawbnb-hub` 目前还没有发布到 npm
+- 在 npm 发布前，不要使用 `openclaw plugins install clawbnb-hub`
+
+首次安装说明：
+
+- 如果你从源码目录或本地 tarball 安装，OpenClaw 可能会提示 `dangerous code patterns` 或 `plugins.allow` 信任警告
+- 这属于当前插件的预期提示，因为它会读取环境变量，并暴露本地 HTTP 控制台与可选的平台回调能力
 
 ## 迁移步骤
 
