@@ -61,6 +61,7 @@ export async function monitorWeixinProvider(opts: MonitorWeixinOpts): Promise<vo
   }
 
   log(`weixin monitor started (${baseUrl}, account=${accountId})`);
+  const pollStartedAt = Date.now();
   aLog.info(
     `Monitor started: baseUrl=${baseUrl} timeoutMs=${longPollTimeoutMs ?? DEFAULT_LONG_POLL_TIMEOUT_MS}`,
   );
@@ -87,7 +88,6 @@ export async function monitorWeixinProvider(opts: MonitorWeixinOpts): Promise<vo
 
   while (!abortSignal?.aborted) {
     try {
-      const pollStartedAt = Date.now();
       aLog.debug(
         `getUpdates: get_updates_buf=${getUpdatesBuf.substring(0, 50)}..., timeoutMs=${nextTimeoutMs}`,
       );
@@ -193,6 +193,14 @@ export async function monitorWeixinProvider(opts: MonitorWeixinOpts): Promise<vo
         return;
       }
       consecutiveFailures += 1;
+      if (!firstPollLogged) {
+        const elapsed = Date.now() - pollStartedAt;
+        errLog(`weixin getUpdates: first poll failed after ${elapsed}ms: ${String(err)}`);
+        aLog.error(
+          `getUpdates first poll failed after ${elapsed}ms: ${String(err)}, stack=${(err as Error).stack}`,
+        );
+        firstPollLogged = true;
+      }
       errLog(
         `weixin getUpdates error (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}): ${String(err)}`,
       );

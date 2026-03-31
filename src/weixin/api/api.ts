@@ -142,10 +142,6 @@ export async function apiGetFetch(params: {
   }
 }
 
-/**
- * Common fetch wrapper: POST JSON to a Weixin API endpoint with timeout + abort.
- * Returns the raw response text on success; throws on HTTP error or timeout.
- */
 async function apiPostFetch(params: {
   baseUrl: string;
   endpoint: string;
@@ -161,6 +157,7 @@ async function apiPostFetch(params: {
 
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), params.timeoutMs);
+  let fetchTimedOut = false;
   try {
     const res = await fetch(url.toString(), {
       method: "POST",
@@ -169,7 +166,24 @@ async function apiPostFetch(params: {
       signal: controller.signal,
     });
     clearTimeout(t);
-    const rawText = await res.text();
+    const textController = new AbortController();
+    const textTimer = setTimeout(() => {
+      textController.abort();
+      fetchTimedOut = true;
+    }, 5_000);
+    let rawText: string;
+    try {
+      rawText = await Promise.race([
+        res.text(),
+        new Promise<never>((_, reject) =>
+          textController.signal.addEventListener("abort", () =>
+            reject(new DOMException("text timeout", "AbortError")),
+          ),
+        ),
+      ]);
+    } finally {
+      clearTimeout(textTimer);
+    }
     logger.debug(`${params.label} status=${res.status} raw=${redactBody(rawText)}`);
     if (!res.ok) {
       throw new Error(`${params.label} ${res.status}: ${rawText}`);
@@ -177,6 +191,9 @@ async function apiPostFetch(params: {
     return rawText;
   } catch (err) {
     clearTimeout(t);
+    if (fetchTimedOut) {
+      throw new Error(`${params.label} text() timeout after 5000ms — server accepted connection but sent no body`);
+    }
     throw err;
   }
 }
