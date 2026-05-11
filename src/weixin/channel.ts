@@ -1,8 +1,7 @@
 import path from "node:path";
-
-import type { ChannelPlugin, OpenClawConfig } from "openclaw/plugin-sdk";
+import type { ChannelPlugin, OpenClawConfig, PluginRuntime } from "openclaw/plugin-sdk";
 import { normalizeAccountId } from "openclaw/plugin-sdk/account-id";
-
+import { assertSessionActive } from "./api/session-guard.js";
 import {
   registerWeixinAccountId,
   loadWeixinAccount,
@@ -12,21 +11,19 @@ import {
   DEFAULT_BASE_URL,
 } from "./auth/accounts.js";
 import type { ResolvedWeixinAccount } from "./auth/accounts.js";
-import { assertSessionActive } from "./api/session-guard.js";
-import { getContextToken } from "./messaging/inbound.js";
-import { resolveOrRegisterWeixinUserAgent } from "./service/user-agent-binding.js";
-import { logger } from "./util/logger.js";
-import { redactToken } from "./util/redact.js";
 import {
   DEFAULT_ILINK_BOT_TYPE,
   startWeixinLoginWithQr,
   waitForWeixinLogin,
 } from "./auth/login-qr.js";
 import type { WeixinQrStartResult, WeixinQrWaitResult } from "./auth/login-qr.js";
-import { monitorWeixinProvider } from "./monitor/monitor.js";
+import { downloadRemoteImageToTemp } from "./cdn/upload.js";
+import { getContextToken } from "./messaging/inbound.js";
 import { sendWeixinMediaFile } from "./messaging/send-media.js";
 import { sendMessageWeixin } from "./messaging/send.js";
-import { downloadRemoteImageToTemp } from "./cdn/upload.js";
+import { resolveOrRegisterWeixinUserAgent } from "./service/user-agent-binding.js";
+import { logger } from "./util/logger.js";
+import { redactToken } from "./util/redact.js";
 
 /** Returns true when mediaUrl refers to a local filesystem path (absolute or relative). */
 function isLocalFilePath(mediaUrl: string): boolean {
@@ -61,17 +58,23 @@ async function sendWeixinOutbound(params: {
   assertSessionActive(account.accountId);
   if (!account.configured) {
     aLog.error(`sendWeixinOutbound: account not configured`);
-    throw new Error("weixin not configured: please run `openclaw channels login --channel clawbnb-weixin`");
+    throw new Error(
+      "weixin not configured: please run `openclaw channels login --channel clawbnb-weixin`",
+    );
   }
   if (!params.contextToken) {
     aLog.error(`sendWeixinOutbound: contextToken missing, refusing to send to=${params.to}`);
     throw new Error("sendWeixinOutbound: contextToken is required");
   }
-  const result = await sendMessageWeixin({ to: params.to, text: params.text, opts: {
-    baseUrl: account.baseUrl,
-    token: account.token,
-    contextToken: params.contextToken,
-  }});
+  const result = await sendMessageWeixin({
+    to: params.to,
+    text: params.text,
+    opts: {
+      baseUrl: account.baseUrl,
+      token: account.token,
+      contextToken: params.contextToken,
+    },
+  });
   return { channel: "clawbnb-weixin", messageId: result.messageId };
 }
 
@@ -287,6 +290,10 @@ export const weixinPlugin: ChannelPlugin<ResolvedWeixinAccount> = {
           );
           log(`⚠️  保存账号数据失败: ${String(err)}`);
         }
+      } else if (waitResult.alreadyConnected) {
+        logger.info(
+          `auth.login: bot already connected to this OpenClaw accountId=${account.accountId}`,
+        );
       } else {
         logger.warn(
           `auth.login: login did not complete accountId=${account.accountId} message=${waitResult.message}`,
@@ -331,6 +338,15 @@ export const weixinPlugin: ChannelPlugin<ResolvedWeixinAccount> = {
       const logPath = aLog.getLogFilePath();
       ctx.log?.info?.(`[${account.accountId}] weixin logs: ${logPath}`);
 
+      if (!ctx.channelRuntime) {
+        const msg = "ctx.channelRuntime missing — host too old or plugin SDK contract violated";
+        aLog.error(msg);
+        ctx.log?.error?.(`[${account.accountId}] ${msg}`);
+        ctx.setStatus?.({ accountId: account.accountId, running: false });
+        throw new Error(msg);
+      }
+
+      const { monitorWeixinProvider } = await import("./monitor/monitor.js");
       return monitorWeixinProvider({
         baseUrl: account.baseUrl,
         cdnBaseUrl: account.cdnBaseUrl,
@@ -338,6 +354,7 @@ export const weixinPlugin: ChannelPlugin<ResolvedWeixinAccount> = {
         accountId: account.accountId,
         config: ctx.cfg,
         runtime: ctx.runtime,
+        channelRuntime: ctx.channelRuntime as unknown as PluginRuntime["channel"],
         abortSignal: ctx.abortSignal,
         setStatus: ctx.setStatus,
       });

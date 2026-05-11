@@ -2,9 +2,10 @@
 // Modifications: multi-session QR management and login snapshot/status helpers.
 
 import { randomUUID } from "node:crypto";
-import { apiGetFetch } from "../api/api.js";
+import { apiGetFetch, apiPostFetch } from "../api/api.js";
 import { logger } from "../util/logger.js";
 import { redactToken } from "../util/redact.js";
+import { listIndexedWeixinAccountIds, loadWeixinAccount } from "./accounts.js";
 
 type ActiveLogin = {
   sessionKey: string;
@@ -17,13 +18,18 @@ type ActiveLogin = {
   agentToken?: string;
   callbackUrl?: string;
   botToken?: string;
-  status?: "wait" | "scaned" | "confirmed" | "expired" | "scaned_but_redirect";
-  lastObservedStatus?: "wait" | "scaned" | "confirmed" | "expired" | "scaned_but_redirect";
+  status?: "wait" | "scaned" | "confirmed" | "expired" | "scaned_but_redirect" | "binded_redirect";
+  lastObservedStatus?:
+    | "wait"
+    | "scaned"
+    | "confirmed"
+    | "expired"
+    | "scaned_but_redirect"
+    | "binded_redirect";
   error?: string;
 };
 
 const ACTIVE_LOGIN_TTL_MS = 5 * 60_000;
-const GET_QRCODE_TIMEOUT_MS = 5_000;
 /** Client-side timeout for the default long-poll get_qrcode_status request. */
 const QR_LONG_POLL_TIMEOUT_MS = 35_000;
 /** Short timeout used by the demo HTTP polling API so the browser can render QR quickly. */
@@ -41,7 +47,7 @@ interface QRCodeResponse {
 }
 
 interface StatusResponse {
-  status: "wait" | "scaned" | "confirmed" | "expired" | "scaned_but_redirect";
+  status: "wait" | "scaned" | "confirmed" | "expired" | "scaned_but_redirect" | "binded_redirect";
   bot_token?: string;
   ilink_bot_id?: string;
   baseurl?: string;
@@ -101,12 +107,26 @@ function purgeExpiredLogins(): void {
   }
 }
 
+function getLocalBotTokenList(): string[] {
+  const tokens: string[] = [];
+  const accountIds = listIndexedWeixinAccountIds().slice(-10);
+  for (const accountId of accountIds) {
+    const token = loadWeixinAccount(accountId)?.token?.trim();
+    if (token) {
+      tokens.push(token);
+    }
+  }
+  return tokens;
+}
+
 async function fetchQRCode(apiBaseUrl: string, botType: string): Promise<QRCodeResponse> {
   logger.info(`Fetching QR code from: ${apiBaseUrl} bot_type=${botType}`);
-  const rawText = await apiGetFetch({
+  const localTokenList = getLocalBotTokenList();
+  logger.info(`fetchQRCode: local_token_list count=${localTokenList.length}`);
+  const rawText = await apiPostFetch({
     baseUrl: apiBaseUrl,
     endpoint: `ilink/bot/get_bot_qrcode?bot_type=${encodeURIComponent(botType)}`,
-    timeoutMs: GET_QRCODE_TIMEOUT_MS,
+    body: JSON.stringify({ local_token_list: localTokenList }),
     label: "fetchQRCode",
   });
   return JSON.parse(rawText) as QRCodeResponse;
@@ -165,6 +185,7 @@ export type WeixinQrStartResult = {
 
 export type WeixinQrWaitResult = {
   connected: boolean;
+  alreadyConnected?: boolean;
   botToken?: string;
   accountId?: string;
   baseUrl?: string;
@@ -370,6 +391,21 @@ export async function pollWeixinLoginStatusOnce(opts: {
       };
     }
 
+    if (statusResponse.status === "binded_redirect") {
+      activeLogins.delete(opts.sessionKey);
+      return {
+        connected: false,
+        alreadyConnected: true,
+        status: "confirmed",
+        qrcodeUrl: activeLogin.qrcodeUrl,
+        startedAt: activeLogin.startedAt,
+        expiresAt: activeLogin.startedAt + ACTIVE_LOGIN_TTL_MS,
+        message: "已连接过此 OpenClaw，无需重复连接。",
+        agentToken: activeLogin.agentToken,
+        callbackUrl: activeLogin.callbackUrl,
+      };
+    }
+
     if (statusResponse.status === "scaned_but_redirect") {
       if (statusResponse.redirect_host) {
         activeLogin.currentApiBaseUrl = `https://${statusResponse.redirect_host}`;
@@ -526,6 +562,18 @@ export async function waitForWeixinLogin(opts: {
             );
           }
           break;
+        }
+        case "binded_redirect": {
+          logger.info(
+            `waitForWeixinLogin: binded_redirect received, bot already bound sessionKey=${opts.sessionKey}`,
+          );
+          process.stdout.write("\n✅ 已连接过此 OpenClaw，无需重复连接。\n");
+          activeLogins.delete(opts.sessionKey);
+          return {
+            connected: false,
+            alreadyConnected: true,
+            message: "已连接过此 OpenClaw，无需重复连接。",
+          };
         }
         case "confirmed": {
           if (!statusResponse.ilink_bot_id) {

@@ -4,6 +4,16 @@
 
 This project follows the [Keep a Changelog](https://keepachangelog.com/) format.
 
+## Unreleased
+
+### Changed
+
+- added OpenClaw 2026.5.x compatibility for the Weixin channel by using the host-injected `ctx.channelRuntime`
+- updated QR login compatibility with `@tencent-weixin/openclaw-weixin@2.4.3`: POST `get_bot_qrcode`, local token list support, and `binded_redirect` handling
+- let fetch compute POST `Content-Length` for iLink requests to avoid Node 24 / undici request rejection
+- added `channelConfigs` plugin metadata for newer OpenClaw hosts
+- auto-add `role=plugin` to rental relay URLs when omitted
+
 ## [2026.3.28]
 
 ### Changed

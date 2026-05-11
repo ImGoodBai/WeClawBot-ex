@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiGetFetch } from "../../src/weixin/api/api.js";
+import { apiGetFetch, apiPostFetch } from "../../src/weixin/api/api.js";
 
 describe("weixin api headers", () => {
   afterEach(() => {
@@ -27,5 +27,27 @@ describe("weixin api headers", () => {
 
     expect(headers["iLink-App-Id"]).toBe("bot");
     expect(headers["iLink-App-ClientVersion"]).toBe("131329");
+  });
+
+  it("lets fetch compute POST content-length", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => "{}",
+    }));
+    vi.stubGlobal("fetch", fetchMock as never);
+
+    await apiPostFetch({
+      baseUrl: "https://ilinkai.weixin.qq.com",
+      endpoint: "ilink/bot/ping",
+      body: "{}",
+      timeoutMs: 100,
+      label: "header-test",
+    });
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const headers = requestInit.headers as Record<string, string>;
+
+    expect(headers["Content-Length"]).toBeUndefined();
   });
 });

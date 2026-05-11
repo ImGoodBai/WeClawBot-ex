@@ -73,7 +73,7 @@ Plugin-level relay and proxy settings stay under `plugins.entries.clawbnb-hub.co
         "config": {
           "hostModelControl": "inherit",
           "apiKey": "YOUR_AGENT_API_KEY",
-          "relayUrl": "ws://127.0.0.1:8787/ws/rental",
+          "relayUrl": "ws://127.0.0.1:8787/ws/rental?role=plugin",
           "proxyBaseUrl": "http://127.0.0.1:8787/api/rental-proxy"
         }
       }

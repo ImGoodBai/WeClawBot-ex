@@ -2,6 +2,16 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/) 格式。
 
+## 未发布
+
+### 变更
+
+- 补齐 OpenClaw 2026.5.x 微信 channel 兼容：改用宿主注入的 `ctx.channelRuntime`
+- 同步 `@tencent-weixin/openclaw-weixin@2.4.3` 相关扫码协议行为：`get_bot_qrcode` 改 POST、支持 local token list、支持 `binded_redirect`
+- iLink POST 请求不再手动设置 `Content-Length`，避免 Node 24 / undici 拒绝请求
+- 为新版 OpenClaw 宿主补充 `channelConfigs` 插件元数据
+- rental relay URL 未带角色时自动补 `role=plugin`
+
 ## [2026.3.28]
 
 ### 变更

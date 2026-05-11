@@ -35,14 +35,37 @@ interface PackageJson {
   ilink_appid?: string;
 }
 
-function readPackageJson(): PackageJson {
+function isOwnPackageJson(parsed: PackageJson): boolean {
+  if (parsed.ilink_appid !== undefined) return true;
+  return typeof parsed.name === "string" && parsed.name.includes("clawbnb-hub");
+}
+
+export function readPackageJsonFromDir(startDir: string): PackageJson {
   try {
-    const dir = path.dirname(fileURLToPath(import.meta.url));
-    const pkgPath = path.resolve(dir, "..", "..", "..", "package.json");
-    return JSON.parse(fs.readFileSync(pkgPath, "utf-8")) as PackageJson;
+    let dir = startDir;
+    const { root } = path.parse(dir);
+    while (dir && dir !== root) {
+      const candidate = path.join(dir, "package.json");
+      if (fs.existsSync(candidate)) {
+        try {
+          const parsed = JSON.parse(fs.readFileSync(candidate, "utf-8")) as PackageJson;
+          if (isOwnPackageJson(parsed)) {
+            return parsed;
+          }
+        } catch {
+          // Keep walking up when a package.json is malformed or unrelated.
+        }
+      }
+      dir = path.dirname(dir);
+    }
   } catch {
-    return {};
+    // Fall through to empty default.
   }
+  return {};
+}
+
+function readPackageJson(): PackageJson {
+  return readPackageJsonFromDir(path.dirname(fileURLToPath(import.meta.url)));
 }
 
 const pkg = readPackageJson();
@@ -93,11 +116,10 @@ function buildCommonHeaders(): Record<string, string> {
   return headers;
 }
 
-function buildHeaders(opts: { token?: string; body: string }): Record<string, string> {
+function buildHeaders(opts: { token?: string }): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     AuthorizationType: "ilink_bot_token",
-    "Content-Length": String(Buffer.byteLength(opts.body, "utf-8")),
     "X-WECHAT-UIN": randomWechatUin(),
     ...buildCommonHeaders(),
   };
@@ -113,7 +135,7 @@ function buildHeaders(opts: { token?: string; body: string }): Record<string, st
 export async function apiGetFetch(params: {
   baseUrl: string;
   endpoint: string;
-  timeoutMs: number;
+  timeoutMs?: number;
   label: string;
 }): Promise<string> {
   const base = ensureTrailingSlash(params.baseUrl);
@@ -121,15 +143,19 @@ export async function apiGetFetch(params: {
   const hdrs = buildCommonHeaders();
   logger.debug(`GET ${redactUrl(url.toString())}`);
 
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), params.timeoutMs);
+  const controller =
+    params.timeoutMs != null && params.timeoutMs > 0 ? new AbortController() : undefined;
+  const t =
+    controller != null && params.timeoutMs != null
+      ? setTimeout(() => controller.abort(), params.timeoutMs)
+      : undefined;
   try {
     const res = await fetch(url.toString(), {
       method: "GET",
       headers: hdrs,
-      signal: controller.signal,
+      ...(controller ? { signal: controller.signal } : {}),
     });
-    clearTimeout(t);
+    if (t !== undefined) clearTimeout(t);
     const rawText = await res.text();
     logger.debug(`${params.label} status=${res.status} raw=${redactBody(rawText)}`);
     if (!res.ok) {
@@ -137,7 +163,7 @@ export async function apiGetFetch(params: {
     }
     return rawText;
   } catch (err) {
-    clearTimeout(t);
+    if (t !== undefined) clearTimeout(t);
     throw err;
   }
 }
@@ -146,29 +172,32 @@ export async function apiGetFetch(params: {
  * Common fetch wrapper: POST JSON to a Weixin API endpoint with timeout + abort.
  * Returns the raw response text on success; throws on HTTP error or timeout.
  */
-async function apiPostFetch(params: {
+export async function apiPostFetch(params: {
   baseUrl: string;
   endpoint: string;
   body: string;
   token?: string;
-  timeoutMs: number;
+  timeoutMs?: number;
   label: string;
 }): Promise<string> {
   const base = ensureTrailingSlash(params.baseUrl);
   const url = new URL(params.endpoint, base);
-  const hdrs = buildHeaders({ token: params.token, body: params.body });
+  const hdrs = buildHeaders({ token: params.token });
   logger.debug(`POST ${redactUrl(url.toString())} body=${redactBody(params.body)}`);
 
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), params.timeoutMs);
+  const controller = params.timeoutMs !== undefined ? new AbortController() : undefined;
+  const t =
+    controller != null && params.timeoutMs !== undefined
+      ? setTimeout(() => controller.abort(), params.timeoutMs)
+      : undefined;
   try {
     const res = await fetch(url.toString(), {
       method: "POST",
       headers: hdrs,
       body: params.body,
-      signal: controller.signal,
+      ...(controller ? { signal: controller.signal } : {}),
     });
-    clearTimeout(t);
+    if (t !== undefined) clearTimeout(t);
     const rawText = await res.text();
     logger.debug(`${params.label} status=${res.status} raw=${redactBody(rawText)}`);
     if (!res.ok) {
@@ -176,7 +205,7 @@ async function apiPostFetch(params: {
     }
     return rawText;
   } catch (err) {
-    clearTimeout(t);
+    if (t !== undefined) clearTimeout(t);
     throw err;
   }
 }

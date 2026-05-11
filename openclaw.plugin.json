@@ -3,6 +3,16 @@
   "name": "ClawBNB Hub",
   "description": "ClawBNB Hub Weixin channel, rental relay, proxy provider, and rental-session safety hooks.",
   "channels": ["clawbnb-weixin"],
+  "channelConfigs": {
+    "clawbnb-weixin": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "label": "clawbnb-weixin",
+      "description": "ClawBNB Hub Weixin channel configuration."
+    }
+  },
   "providers": ["molt-proxy"],
   "configSchema": {
     "type": "object",

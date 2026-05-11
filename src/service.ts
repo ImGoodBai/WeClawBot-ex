@@ -182,6 +182,18 @@ function writeMoltMarketTrace(entry: Record<string, unknown>): void {
   }
 }
 
+export function resolvePluginRelayUrl(relayUrl: string): string {
+  try {
+    const url = new URL(relayUrl);
+    if (!url.searchParams.has("role")) {
+      url.searchParams.set("role", "plugin");
+    }
+    return url.toString();
+  } catch {
+    return relayUrl;
+  }
+}
+
 export class MoltMarketServiceRuntime {
   private readonly runtime: PluginRuntime;
   private readonly logger: PluginLogger;
@@ -265,17 +277,18 @@ export class MoltMarketServiceRuntime {
       this.scheduleReconnect();
       return;
     }
-    const socket = new this.deps.WebSocketCtor(this.config.relayUrl);
+    const relaySocketUrl = resolvePluginRelayUrl(this.config.relayUrl);
+    const socket = new this.deps.WebSocketCtor(relaySocketUrl);
     this.socket = socket;
     socket.on("open", () => {
       this.reconnectAttempt = 0;
       this.registered = false;
       this.currentPresence = null;
-      this.logger.info(`${SERVICE_LOG_PREFIX} connected ${this.config.relayUrl}`);
+      this.logger.info(`${SERVICE_LOG_PREFIX} connected ${relaySocketUrl}`);
       this.trace({
         dir: "internal",
         event: "socket.open",
-        relayUrl: this.config.relayUrl,
+        relayUrl: relaySocketUrl,
         agentId,
       });
       this.sendEvent("agent.register", buildRegisterPayload(this.config, agentId));
@@ -289,7 +302,7 @@ export class MoltMarketServiceRuntime {
       this.trace({
         dir: "internal",
         event: "socket.close",
-        relayUrl: this.config.relayUrl,
+        relayUrl: relaySocketUrl,
         agentId: this.resolvedAgentId || agentId,
       });
       this.socket = null;
@@ -305,7 +318,7 @@ export class MoltMarketServiceRuntime {
       this.trace({
         dir: "internal",
         event: "socket.error",
-        relayUrl: this.config.relayUrl,
+        relayUrl: relaySocketUrl,
         agentId: this.resolvedAgentId || agentId,
         error: error instanceof Error ? error.message : String(error),
       });

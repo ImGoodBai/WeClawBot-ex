@@ -3,11 +3,14 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MoltMarketServiceRuntime } from "./service.js";
-import { buildOrderTag, buildSessionKey, encodeEnvelope } from "./contracts.js";
 import { resolveMoltMarketConfig } from "./config.js";
+import { buildOrderTag, buildSessionKey, encodeEnvelope } from "./contracts.js";
+import { MoltMarketServiceRuntime, resolvePluginRelayUrl } from "./service.js";
 
-async function waitFor(predicate: () => boolean | Promise<boolean>, timeoutMs = 2_000): Promise<void> {
+async function waitFor(
+  predicate: () => boolean | Promise<boolean>,
+  timeoutMs = 2_000,
+): Promise<void> {
   const startedAt = Date.now();
   while (!(await predicate())) {
     if (Date.now() - startedAt > timeoutMs) {
@@ -22,6 +25,15 @@ describe("clawbnb-hub service", () => {
 
   afterEach(async () => {
     vi.restoreAllMocks();
+  });
+
+  it("adds the plugin role to relay urls when omitted", () => {
+    expect(resolvePluginRelayUrl("ws://127.0.0.1:3000/ws/rental")).toBe(
+      "ws://127.0.0.1:3000/ws/rental?role=plugin",
+    );
+    expect(resolvePluginRelayUrl("ws://127.0.0.1:3000/ws/rental?role=plugin")).toBe(
+      "ws://127.0.0.1:3000/ws/rental?role=plugin",
+    );
   });
 
   it("registers, heartbeats, streams replies, and cleans up closed sessions", async () => {
@@ -83,7 +95,9 @@ describe("clawbnb-hub service", () => {
 
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "clawbnb-hub-test-"));
     const onAgentEvent = vi.fn<
-      (listener: (evt: { runId: string; stream: string; data: Record<string, unknown> }) => void) => () => void
+      (
+        listener: (evt: { runId: string; stream: string; data: Record<string, unknown> }) => void,
+      ) => () => void
     >((listener) => {
       setTimeout(() => {
         listener({
